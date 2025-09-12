@@ -52,7 +52,7 @@ g++ -O2 -std=c++17 main.cpp DataCleaner.cpp -o data_cleaner
     ```bash
     make debug
     
-    ./data_cleaner   # or ./data_cleaner.exe
+    ./data_cleaner
     ```
 
 - release
@@ -119,12 +119,12 @@ g++ -O2 -std=c++17 main.cpp DataCleaner.cpp -o data_cleaner
 > [!TIP]
 > 其他提示：
 >
-> - 使用平行編譯加速建置：
+> - 平行編譯加速：
 >  ```bash
 >  make -j
 >  ```
 >
-> - 若要臨時覆寫變數（例如自訂目標檔名）：
+> - 自訂目標檔名：
 >  ```bash
 >  make TARGET=my_cleaner
 >  ```
@@ -147,7 +147,7 @@ make
 ```
 
 ```bash
-./data_cleaner
+./data_cleaner    # or ./data_cleaner.exe
 ```
 
 <br>
