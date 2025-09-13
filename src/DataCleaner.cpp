@@ -14,7 +14,7 @@
 // Console colors
 #define COLOR_RESET "\033[0m"
 #define COLOR_INFO "\033[36m"
-#define COLOR_STAGE "\033[37m"
+#define COLOR_STAGE "\033[90m"
 #define COLOR_DROP "\033[31m"
 #define COLOR_SUMMARY "\033[33m"
 #define COLOR_BENCH "\033[32m"
@@ -444,8 +444,8 @@ int DataCleaningPipeline::run() {
     bench_.setTotal(tEnd - tStart);
 
     std::cerr << COLOR_STAGE "\n[STAGE 3] " COLOR_RESET "Materialization: wrote outputs\n";
-    std::cerr << "    - Cleaned rows: " << std::setw(6) << rowsKept << " --> " << cfg_.outputCleanPath << "\n";
-    std::cerr << "    - Dropped rows: " << std::setw(6) << rowsDropped << " --> " << cfg_.outputDroppedPath << "\n";
+    std::cerr << "    - Cleaned rows: " << std::setw(6) << rowsKept << "   -->   " << cfg_.outputCleanPath << "\n";
+    std::cerr << "    - Dropped rows: " << std::setw(6) << rowsDropped << "   -->   " << cfg_.outputDroppedPath << "\n";
 
     bench_.printSummary(rowsTotal, rowsKept, rowsDropped);
     return 0;
