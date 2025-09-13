@@ -1,13 +1,22 @@
 #include "DataCleaner.hpp"
 
-int main() {
+std::string getArg(int argc, char* argv[], int idx, const std::string& def) {
+    return (argc > idx) ? argv[idx] : def;
+}
+
+int main(int argc, char* argv[]) {
     PipelineConfig cfg;
 
-    // File paths
-    cfg.inputPath = "data/down-to-up.csv";
-    cfg.outputCleanPath = "data/output_clean.csv";
-    cfg.outputDroppedPath = "data/output_dropped.csv";
-    
+    // Default file paths
+    std::string defaultInputPath = "data/down-to-up.csv";
+    std::string defaultCleanPath = "data/output_clean.csv";
+    std::string defaultDroppedPath = "data/output_dropped.csv";
+
+    // Set file paths
+    cfg.inputPath = getArg(argc, argv, 1, defaultInputPath);
+    cfg.outputCleanPath = getArg(argc, argv, 2, defaultCleanPath);
+    cfg.outputDroppedPath = getArg(argc, argv, 3, defaultDroppedPath);
+
     // Columns to keep
     cfg.keepColumns = {
         "timestamp", "frameNum", "error", "gesturePresence", "gesture",
@@ -23,6 +32,11 @@ int main() {
     
     // For debugging: print dropped rows to console
     cfg.printDroppedToStderr = true;
+
+    if (argc == 1) {
+        std::cout << "\nUsing default file paths.\n";
+        std::cout << "\nTo customize: " << argv[0] << " [input.csv] [output_clean.csv] [output_dropped.csv]\n";
+    }
 
     DataCleaningPipeline pipeline(cfg);
     return pipeline.run();
