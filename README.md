@@ -197,13 +197,13 @@ g++ -O2 -std=c++17 main.cpp DataCleaner.cpp -o data_cleaner
 
   - 若只輸入部分參數，剩下的會自動使用預設值。
 
-  - 例如只指定輸入檔：
+    例如只指定輸入檔：
 
      ```bash
      ./data_cleaner data/left-to-right.csv
      ```
 
-     清洗後/丟棄輸出仍為預設路徑。
+     清洗後/丟棄輸出仍為程式內部預設路徑。
 
   <br>
 
