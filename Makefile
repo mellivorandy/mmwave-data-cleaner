@@ -39,6 +39,7 @@ rebuild: clean all
 
 # Remove all generated CSV files except the input file
 clean-output:
+	@echo
 	@find data/ -type f -name '*.csv' \
 		! -name 'left-to-right.csv' \
 		! -name 'right-to-left.csv' \
@@ -46,6 +47,6 @@ clean-output:
 		! -name 'down-to-up.csv' \
 		! -name 'push.csv' \
 		! -name 'pull.csv' \
-		-delete
+		-exec printf "\033[0;31m[DEL]\033[0m " \; -print -delete
 
 .PHONY: all clean debug release run rebuild clean-output
