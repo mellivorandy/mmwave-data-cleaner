@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
     // Columns for filtering
     cfg.gesturePresenceCol = "gesturePresence";
     cfg.frameNumCol = "frameNum";
+    cfg.gestureCol = "gesture";
     cfg.excludeFromClean = {"gesturePresence"};
     
     // For debugging: print dropped rows to console

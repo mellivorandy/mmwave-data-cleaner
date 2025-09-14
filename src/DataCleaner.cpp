@@ -1,7 +1,7 @@
 #include <chrono>
 #include <fstream>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -34,7 +34,7 @@ void split_comma_sv(const std::string& line, std::vector<std::string_view>& out)
     out.clear();
 
     const char* s = line.data();
-    
+
     size_t n = line.size();
     size_t start = 0;
     for (size_t i = 0; i < n; ++i) {
@@ -57,7 +57,7 @@ bool CsvReader::open() {
     if (!fin_) {
         return false;
     }
-        
+    
     if (bufferBytes_ > 0) {
         buffer_.resize(bufferBytes_);
         fin_.rdbuf()->pubsetbuf(buffer_.data(), static_cast<std::streamsize>(buffer_.size()));
@@ -70,7 +70,7 @@ bool CsvReader::readHeader(std::vector<std::string>& headersOut,
                            std::unordered_map<std::string, int>& nameToIndexOut) {
     headersOut.clear();
     nameToIndexOut.clear();
-
+    
     if (!std::getline(fin_, headerLine_)) {
         return false;
     }
@@ -80,7 +80,7 @@ bool CsvReader::readHeader(std::vector<std::string>& headersOut,
     std::vector<std::string_view> sv;
     split_comma_sv(headerLine_, sv);
     headersOut.reserve(sv.size());
-    
+
     for (int i = 0; i < static_cast<int>(sv.size()); ++i) {
         headersOut.emplace_back(sv[i]);
         nameToIndexOut.emplace(headersOut.back(), i);
@@ -169,7 +169,7 @@ ColumnProjector::ColumnProjector(std::vector<std::string> keepColumns,
     keepIndices_.clear();
     keepIndices_.reserve(keepNames_.size());
     missingKept_ = 0;
-    
+
     for (const auto& name : keepNames_) {
         auto it = nameToIndex.find(name);
         if (it == nameToIndex.end()) {
@@ -232,7 +232,7 @@ GesturePresenceZeroFilter::GesturePresenceZeroFilter(int idx) : idx_(idx) {}
 bool GesturePresenceZeroFilter::shouldDrop(const std::vector<std::string_view>& rawCells,
                                            std::string& reasonOut) const {
     if (idx_ < 0) {
-        return false; 
+        return false;
     }
     if (idx_ >= static_cast<int>(rawCells.size())) {
         return false;
@@ -262,6 +262,26 @@ bool FrameNumEmptyFilter::shouldDrop(const std::vector<std::string_view>& rawCel
     return false;
 }
 
+// Majority gesture filter implementation
+GestureMajorityFilter::GestureMajorityFilter(int idx, std::string majorityGesture)
+    : idx_(idx), majorityGesture_(std::move(majorityGesture)) {}
+
+bool GestureMajorityFilter::shouldDrop(const std::vector<std::string_view>& rawCells,
+                                       std::string& reasonOut) const {
+    if (idx_ < 0 || idx_ >= static_cast<int>(rawCells.size())) {
+        return false;
+    }
+        
+    auto val = rawCells[static_cast<size_t>(idx_)];
+
+    if (val == "0" || majorityGesture_.empty() || val == majorityGesture_) {
+        return false;
+    }
+
+    reasonOut = "gesture mismatch: found [" + std::string(val) + "], expected [" + majorityGesture_ + "]";
+    return true;
+}
+
 void CompositeFilter::add(std::unique_ptr<RecordFilter> filter) {
     filters_.emplace_back(std::move(filter));
 }
@@ -276,28 +296,28 @@ bool CompositeFilter::shouldDrop(const std::vector<std::string_view>& rawCells, 
 }
 
 // Benchmarking implementation
-void Bench::addSplit(ns d) { 
-    durSplit_ += d; 
+void Bench::addSplit(ns d) {
+    durSplit_ += d;
 }
 
-void Bench::addProject(ns d) { 
-    durProject_ += d; 
+void Bench::addProject(ns d) {
+    durProject_ += d;
 }
 
-void Bench::addFilter(ns d) { 
-    durFilter_ += d; 
+void Bench::addFilter(ns d) {
+    durFilter_ += d;
 }
 
-void Bench::addWriteClean(ns d) { 
-    durWriteClean_ += d; 
+void Bench::addWriteClean(ns d) {
+    durWriteClean_ += d;
 }
 
-void Bench::addWriteDrop(ns d) { 
-    durWriteDrop_ += d; 
+void Bench::addWriteDrop(ns d) {
+    durWriteDrop_ += d;
 }
 
-void Bench::setTotal(ns d) { 
-    durTotal_ = d; 
+void Bench::setTotal(ns d) {
+    durTotal_ = d;
 }
 
 void Bench::printSummary(size_t total, size_t kept, size_t dropped) const {
@@ -359,9 +379,58 @@ int DataCleaningPipeline::run() {
     // Filter setup
     const int idxGesturePresence = indexOf(nameToIndex, cfg_.gesturePresenceCol);
     const int idxFrameNum = indexOf(nameToIndex, cfg_.frameNumCol);
+    const int idxGesture = indexOf(nameToIndex, cfg_.gestureCol);
+
+    // Calculate majority gesture
+    std::string majorityGesture;
+    
+    {
+        CsvReader statReader(cfg_.inputPath, cfg_.readerBufferBytes);
+
+        if (!statReader.open()) {
+            std::cerr << "ERROR: cannot open input for gesture stat: " << cfg_.inputPath << "\n";
+            return 1;
+        }
+
+        std::string line;
+        statReader.readHeader(headerNames, nameToIndex);
+        std::unordered_map<std::string, size_t> gestureCount;
+        
+        while (statReader.readLine(line)) {
+            std::vector<std::string_view> cells;
+            split_comma_sv(line, cells);
+            if (idxGesture >= 0 && idxGesture < static_cast<int>(cells.size())) {
+                std::string_view g = cells[idxGesture];
+                if (g != "0" && !g.empty()) {
+                    gestureCount[std::string(g)]++;
+                }
+            }
+        }
+
+        statReader.close();
+        size_t maxCount = 0;
+        majorityGesture = "";
+        
+        for (const auto& kv : gestureCount) {
+            if (kv.second > maxCount) {
+                majorityGesture = kv.first;
+                maxCount = kv.second;
+            }
+        }
+
+        if (majorityGesture == "") {
+            std::cerr << COLOR_STAGE "\n[STAGE 1.5] " COLOR_RESET 
+                      << "WARNING: No valid non-zero gesture found.\n";
+        } else {
+            std::cerr << COLOR_STAGE "\n[STAGE 1.5] " COLOR_RESET
+                      << "Majority gesture = [" << majorityGesture << "], which appeared " << maxCount << " times\n";
+        }
+    }
+
     CompositeFilter filter;
     filter.add(std::make_unique<GesturePresenceZeroFilter>(idxGesturePresence));
     filter.add(std::make_unique<FrameNumEmptyFilter>(idxFrameNum));
+    filter.add(std::make_unique<GestureMajorityFilter>(idxGesture, majorityGesture));
     std::cerr << COLOR_STAGE "\n[STAGE 2] " COLOR_RESET "Record filtering: cleaning data...\n\n";
 
     // Writers
@@ -393,7 +462,7 @@ int DataCleaningPipeline::run() {
         if (!reader.readLine(line)) {
             break;
         }
-        
+
         ++rowsTotal;
 
         const auto t0 = Clock::now();

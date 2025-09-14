@@ -21,10 +21,11 @@ struct PipelineConfig {
     std::string inputPath;
     std::string outputCleanPath;
     std::string outputDroppedPath;
-
+    
     std::vector<std::string> keepColumns;
     std::string gesturePresenceCol;
     std::string frameNumCol;
+    std::string gestureCol;
 
     std::vector<std::string> excludeFromClean;
 
@@ -108,6 +109,17 @@ private:
     int idx_;
 };
 
+class GestureMajorityFilter : public RecordFilter {
+public:
+    GestureMajorityFilter(int idx, std::string majorityGesture);
+    bool shouldDrop(const std::vector<std::string_view>& rawCells,
+                    std::string& reasonOut) const override;
+
+private:
+    int idx_;
+    std::string majorityGesture_;
+};
+
 class CompositeFilter {
 public:
     void add(std::unique_ptr<RecordFilter> filter);
@@ -143,6 +155,11 @@ public:
 
 private:
     static int indexOf(const std::unordered_map<std::string, int>& map, const std::string& key);
+
+    static std::string computeMajorityGesture(
+        CsvReader& reader,
+        int gestureIdx);
+
     PipelineConfig cfg_;
     Bench bench_;
 };
